@@ -1,0 +1,1 @@
+ghc -o dka-2-mka dka-2-mka.hs
