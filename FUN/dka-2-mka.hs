@@ -1,52 +1,41 @@
 import System.Environment
+import System.IO
 import Data.List
-                                       
-parseArguments arguments = if length arguments < 1 || length arguments > 2 
-    then "Wrong parameters"
-    else do show(arguments) ++ " pohoda"
-            --let validArguments = ["-i", "-t"]
-            --debugPrintElements validArguments
-
-myLast :: [a] -> a
-myLast [] = error "empty list"
-myLast [x] = x
-myLast (_:xs) = myLast xs
-
-myButLast :: [a] -> a
-myButLast [x] = error "list must have at least two elements"
-myButLast [] = error "empty list"
-myButLast (x:xs) = do if length xs == 1
-                      then x
-                      else myButLast xs
-                      
-elementAt :: [a] -> Int -> a
-elementAt [] k = error "empty list"
-elementAt (x:_) 1 = x
-elementAt (x:xs) k = elementAt xs (k-1)
-
-myLength :: [a] -> Int
-myLength [] = 0
-myLength (_:xs) = 1 + myLength xs
-
-myReverse :: [a] -> [a]
-myReverse [] = []
-myReverse (x:xs) = myReverse xs ++ [x]
-
-isPalindrome :: (Eq a) => [a] -> Bool
-isPalindrome [] = True
-isPalindrome [_] = True
-isPalindrome x =  (head x) == (last x) && (isPalindrome $ init $ tail x)
-
-data NestedList a = Elem a | List [NestedList a]
-flatten :: NestedList a -> [a]
-flatten (Elem x) = [x]
-flatten (List x) = concatMap flatten x
+import Data.Char
+                                      
             
+parseArguments arguments = if length arguments < 1 || length arguments > 2 
+    then error "Wrong parameters"
+    else getArguments arguments
+            
+getArguments :: [String] -> Bool
+getArguments [] = error "Missing argument"
+getArguments [x]
+    | x == "-i" = False    --- Just analyze and output DKA
+    | x == "-t" = True     --- Output as MKA
+    | otherwise = error "Unknown argument"
+getArguments [x, _]
+    | x == "-i" = False    --- Just analyze and output DKA
+    | x == "-t" = True     --- Output as MKA
+    | otherwise = error "Unknown argument"
+getArguments _ = error "Wrong arguments"
+
+getInput arguments = if length arguments == 1
+    then return stdin
+    else openFile (last arguments) ReadMode
+ 
+main :: IO() 
 main = do
-    --arguments <- getArgs
-    --print arguments
-    --print (parseArguments arguments)
-    print (flatten (List [Elem 1, List [Elem 2, List [Elem 3, Elem 4], Elem 5]]))
-    print (isPalindrome "madammadam")
-    print (isPalindrome [1,2,4,8,16,8,4,2,1])
-    return()
+    arguments <- getArgs
+    print arguments
+    let reduce = getArguments arguments     --select if i have to reduce the automat or just print it
+    input <- getInput arguments         -- read from file or stdin?
+    content <- hGetContents input       -- read
+    putStr content
+    
+    hClose input
+    
+
+boolToString :: Bool -> String
+boolToString True = "TRUE"
+boolToString False = "FALSE"
