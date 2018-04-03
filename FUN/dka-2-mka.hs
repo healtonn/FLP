@@ -73,39 +73,51 @@ parseAutomat (states:start:end:transitionRules) = Automat{
 parseAutomat others = error "invalid automat"
 
 -- get all states from provided line (should be first line in input file)
+parseInputStates :: [Char] -> Set.Set State
 parseInputStates inputStates = Set.fromList $ splitOn "," inputStates
 
 -- get starting state from provided line (should be second line in input file)
+parseStartingState :: [Char] -> State
 parseStartingState startingState = startingState
 
 -- get final states from provided line (should be third line in input file)
+parseFinalStates :: [Char] -> Set.Set State
 parseFinalStates finalStates = Set.fromList $ splitOn "," finalStates
 
 -- get alphabet from rules (rules should be from 4th line to the end in input file)
+parseAlphabetFromRules :: [String] -> Alphabet
 parseAlphabetFromRules rules = parseAlphabetFromRule rules Set.empty
     where
         parseAlphabetFromRule ([]:_) set = set
         parseAlphabetFromRule rules set = Set.fromList (map (\rule -> (splitOn "," rule) !! 1) rules)
 
 -- get transition rules (rules should be from 4th line to the end in input file)
+parseRules :: [String] -> [Rule]
 parseRules rules = map (\rule -> readSingleRule rule) rules
 
 -- get single rule from parseAlphabetFromRules and process it
+readSingleRule :: String -> Rule
 readSingleRule rule = do
-                        let splittedRule = splitOn "," rule
-                        if length splittedRule /= 3
-                        then error "incorrect transition rule found"
-                        else Rule {
-                            currentState = splittedRule !! 0,
-                            inputSymbol = splittedRule !! 1,
-                            newState = splittedRule !! 2
-                        }
+    let splittedRule = splitOn "," rule
+    if length splittedRule /= 3
+    then error "incorrect transition rule found"
+    else Rule {
+        currentState = splittedRule !! 0,
+        inputSymbol = splittedRule !! 1,
+        newState = splittedRule !! 2
+    }
     
-printDKA inputAutomat = do 
-    print "DKA"
+-- output automat to stdout
+printKA :: Automat -> IO()
+printKA automat = do
+    putStrLn $ concat $ intersperse "," $ Set.toList $ states automat   -- print all states
+    putStrLn $ startingState automat    -- print starting state
+    putStrLn $ concat $ intersperse "," $ Set.toList $ endStates automat -- print all ending states
+    putStrLn $ concat $ intersperse "\n" $ map (\rule -> printRule rule) $ rules automat        -- print all rules
 
-printMKA inputAutomat = do 
-    print "MKA"
+-- help function for printKA, to print rules
+printRule :: Rule -> String
+printRule rule = currentState rule++ "," ++ inputSymbol rule ++ "," ++ newState rule
  
 main :: IO() 
 main = do
@@ -119,8 +131,8 @@ main = do
     print (show dka)
     
     if doReduce
-    then printMKA dka          -- output MKA
-    else printDKA dka     -- output analyzed DKA
+    then printKA dka          -- output MKA
+    else printKA dka     -- output analyzed DKA
     
     hClose input
     
