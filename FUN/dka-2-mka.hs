@@ -3,6 +3,7 @@ import System.IO
 import Data.List
 import Data.Char
 import Data.List.Split
+import Control.Monad
 import qualified Data.Set as Set
 
 
@@ -106,6 +107,36 @@ readSingleRule rule = do
         inputSymbol = splittedRule !! 1,
         newState = splittedRule !! 2
     }
+
+-- process created Automat data structure and preform validity checks for all elements
+isAutomatValid :: Automat -> Bool
+isAutomatValid automat = (all areStatesValid $ states automat) &&
+                         (isStartingStateValid automat $ startingState automat) &&
+                         (areEndingStatesValid automat) &&
+                         (all (\rule -> areRulesValid automat rule) $ rules automat)
+
+-- Return true if all states are valid, false otherwise
+areStatesValid :: State -> Bool
+areStatesValid states = all isDigit states
+
+-- Return true if starting state is in set of states, false otherwise
+-- note to myself: this is basicly "is state in states", so i can as well use it that way
+isStartingStateValid :: Automat -> State -> Bool
+isStartingStateValid automat state = elem state $ states automat
+
+-- return true if ending states are in set of states, false otherwise
+areEndingStatesValid :: Automat -> Bool
+areEndingStatesValid automat = all (\state -> isStartingStateValid automat state) $ endStates automat
+
+-- return true if provided transition rule is valid, false otherwise
+areRulesValid :: Automat -> Rule -> Bool
+areRulesValid automat rule = (isStartingStateValid automat $ currentState rule) &&
+                             (isSymbolValid (inputSymbol rule) automat) &&
+                             (isStartingStateValid automat $ newState rule)
+
+-- return true if provided symbol is in alphabet, false otherwise
+isSymbolValid :: Symbol -> Automat -> Bool
+isSymbolValid symbol automat = elem symbol $ alphabet automat
     
 -- output automat to stdout
 printKA :: Automat -> IO()
@@ -124,19 +155,17 @@ main = do
     arguments <- getArgs
     print arguments
     let doReduce = getArguments arguments     --select if i have to reduce the automat or just print it
+    
     input <- getInput arguments         -- read from file or stdin?
     content <- hGetContents input       -- read
     putStr content
+    
     let dka = parseAutomat $ lines content
     print (show dka)
+    when (not $ isAutomatValid dka) $ error "This is not valid automat"
     
     if doReduce
     then printKA dka          -- output MKA
     else printKA dka     -- output analyzed DKA
     
     hClose input
-    
-
-boolToString :: Bool -> String
-boolToString True = "TRUE"
-boolToString False = "FALSE"
