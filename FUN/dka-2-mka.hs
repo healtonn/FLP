@@ -96,7 +96,7 @@ parseAlphabetFromRules rules = parseAlphabetFromRule rules Set.empty
 parseRules :: [String] -> [Rule]
 parseRules rules = map (\rule -> readSingleRule rule) rules
 
--- get single rule from parseAlphabetFromRules and process it
+-- get single rule from parseRules and process it
 readSingleRule :: String -> Rule
 readSingleRule rule = do
     let splittedRule = splitOn "," rule
@@ -137,6 +137,36 @@ areRulesValid automat rule = (isStartingStateValid automat $ currentState rule) 
 -- return true if provided symbol is in alphabet, false otherwise
 isSymbolValid :: Symbol -> Automat -> Bool
 isSymbolValid symbol automat = elem symbol $ alphabet automat
+
+-- according to TIN script, sink state has to  be added in order to create MKA. New sink state has number "0" if added
+addSinkToAutomat :: Automat -> Automat
+addSinkToAutomat automat = if isSinkStateNeeded automat
+    then automat {
+        states = Set.insert "0" $ states automat,
+        rules = rulesWithSinkState automat
+    }
+    else automat
+    where
+        automatRules automat = [(currentState, inputSymbol) | currentState <- (Set.toList $ states automat), inputSymbol <- (Set.toList $ alphabet automat)]
+        allRulesPossible automat = [(currentState, inputSymbol) | currentState <- (Set.toList $ states automat) ++ ["0"], inputSymbol <- (Set.toList $ alphabet automat)]
+        rulesWithSinkState automat = (rules automat) ++ (map (\rule -> createRule rule) ((allRulesPossible automat) \\ (automatRules automat)))
+        createRule (state, symbol) = Rule {
+            currentState = state,
+            inputSymbol = symbol,
+            newState = "0"
+        }
+
+-- perform check if sink is needed. The rule is states * alpha symbols should be equal transition rules. If not, sink is added
+isSinkStateNeeded :: Automat -> Bool
+isSinkStateNeeded automat = if (numberOfStates * numberOfSymbols) == numberOfTransitionRules
+    then False
+    else True
+    where
+        numberOfStates = Set.size $ states automat
+        numberOfSymbols = Set.size $ alphabet automat
+        numberOfTransitionRules = length $ rules automat
+
+
     
 -- output automat to stdout
 printKA :: Automat -> IO()
@@ -165,7 +195,7 @@ main = do
     when (not $ isAutomatValid dka) $ error "This is not valid automat"
     
     if doReduce
-    then printKA dka          -- output MKA
+    then printKA $ addSinkToAutomat dka          -- output MKA
     else printKA dka     -- output analyzed DKA
     
     hClose input
