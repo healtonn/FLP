@@ -2,6 +2,8 @@ import System.Environment
 import System.IO
 import Data.List
 import Data.Char
+import Data.Ord
+import Data.Function
 import Data.List.Split
 import Control.Monad
 import qualified Data.Set as Set
@@ -17,7 +19,7 @@ data Rule = Rule {
     currentState :: State,
     inputSymbol :: Symbol,
     newState :: State
-}
+} deriving (Eq)     -- to be able to use nub
 
 -- representation of KA
 data Automat = Automat {
@@ -166,7 +168,108 @@ isSinkStateNeeded automat = if (numberOfStates * numberOfSymbols) == numberOfTra
         numberOfSymbols = Set.size $ alphabet automat
         numberOfTransitionRules = length $ rules automat
 
+-- create final MKA
+reduceAutomat :: Automat -> Automat
+reduceAutomat automat = automat{
+    states = reduceStates automat,
+    startingState = getNewStartingState automat,
+    endStates = reduceEndStates automat,
+    rules = reduceRules automat
+} where
+    -- P = {F, Q \ F}
+    -- W = {F}
+    p = Set.fromList [endStates automat, Set.difference (states automat) (endStates automat)]
+    w = Set.singleton (endStates automat)
+    reduceStates automat = Set.map (\state -> (Set.toList state) !! 0) reducedStates
+    getNewStartingState automat = (Set.toList newStartingState) !! 0
+    reduceEndStates automat = Set.map (\state -> (Set.toList state) !! 0) reducedEndStates
+    reduceRules automat = getReducedRules (rules automat) reducedStates
+    reducedStates = hopcroft p w (alphabet automat) (rules automat)
+    newStartingState = getNewStartingState' (startingState automat) reducedStates
+    reducedEndStates = getReducedEndStates (endStates automat) reducedStates
 
+-- hopcroft algorithm implemented as described at DFA minimization wikipedia  
+-- while (W is not empty) DO  
+hopcroft :: Set.Set(Set.Set State) -> Set.Set(Set.Set State) -> Set.Set Symbol -> [Rule] -> Set.Set(Set.Set State)
+hopcroft p w alphabet rules = if (Set.size w) /= 0
+    then hopcroft newP newW alphabet rules
+    else p
+    where
+        (newP, (a, newW)) = hopcroftForEachC (p, Set.deleteFindMin w) alphabet rules    -- choose and remove set A from W
+
+-- For each C in alphabet DO
+hopcroftForEachC :: (Set.Set(Set.Set State),(Set.Set State,Set.Set(Set.Set State))) -> Alphabet -> [Rule] -> (Set.Set(Set.Set State),(Set.Set State,Set.Set(Set.Set State)))
+hopcroftForEachC (p, (a, w)) alphabet rules = if Set.size alphabet /= 0
+    then hopcroftForEachC (hopcroftModifySets (p, (a, w)) c rules) c1 rules
+    else (p, (a, w))
+    where
+        (c, c1) = Set.deleteFindMin alphabet
+
+-- for each set Y in P for which X intersection Y is nonempty and Y \ X is not empty DO
+hopcroftModifySets :: (Set.Set(Set.Set State),(Set.Set State,Set.Set(Set.Set State))) -> Symbol -> [Rule] -> (Set.Set(Set.Set State),(Set.Set State,Set.Set(Set.Set State)))
+hopcroftModifySets (p, (a, w)) c rules = do
+    let setX = hopcroftGetX a c rules 
+    let setY = hopcroftGetY p setX
+    let tmpY = getDifferenceInSets p setY
+    (hopcroftReplaceYinP setY tmpY setX, (a, hopcroftReplaceYinW setY setX w))
+
+hopcroftReplaceYinP :: Set.Set(Set.Set State) -> Set.Set(Set.Set State) -> Set.Set State -> Set.Set(Set.Set State)        
+hopcroftReplaceYinP setY tmpY setX = Set.union tmpY (hopcroftReplaceSetYinP setY setX)
+
+hopcroftReplaceSetYinP :: Set.Set(Set.Set State) -> Set.Set State -> Set.Set(Set.Set State)
+hopcroftReplaceSetYinP setY setX = Set.union (Set.map (\y -> Set.intersection setX y) setY) (Set.map (\y -> getDifferenceInSets y setX) setY)
+
+hopcroftReplaceYinW :: Set.Set(Set.Set State) -> Set.Set State -> Set.Set(Set.Set State) -> Set.Set(Set.Set State)
+hopcroftReplaceYinW setY setX setW = Set.union setW (Set.map ifYinW setY)
+    where ifYinW y = if (elem y setW)
+                     then hopcroftReplaceYinW' setX y   -- IF Y is in W
+                     else hopcroftAddResultToW setX y   -- ELSE
+
+-- replace Y in W by same two sets
+hopcroftReplaceYinW' setX setY = Set.union (Set.intersection setX setY) (getDifferenceInSets setY setX)
+
+-- ELSE Y not inn W
+hopcroftAddResultToW setX setY = if (Set.size (Set.intersection setX setY) <= Set.size (getDifferenceInSets setY setX))
+    then Set.intersection setX setY -- add X intersection Y to W
+    else getDifferenceInSets setY setX -- ADD Y \ X to W  
+
+hopcroftGetY :: Set.Set(Set.Set State) -> Set.Set State -> Set.Set(Set.Set State)
+hopcroftGetY p setX = Set.filter (\setY -> (doesSetConatinsSomething (Set.intersection setX setY) && doesSetConatinsSomething (getDifferenceInSets setY setX))) p
+
+hopcroftGetX :: Set.Set State -> Symbol -> [Rule] -> Set.Set State
+hopcroftGetX requestedSets symbol rules = getSetOfRulesLeadingToSetsInA (getRulesWithNewStates (getRulesWithSymbol rules symbol) requestedSets)
+
+getNewStartingState' :: State -> Set.Set(Set.Set State) -> Set.Set State
+getNewStartingState' currentStartingState reducedStates = Set.elemAt 0 $ Set.filter (\state -> Set.member currentStartingState state) reducedStates
+
+getReducedEndStates :: Set.Set State -> Set.Set(Set.Set State) -> Set.Set(Set.Set State)
+getReducedEndStates currentEndstates reducedStates = Set.filter (\state -> doesSetConatinsSomething $ Set.intersection state currentEndstates) reducedStates
+
+getReducedRules :: [Rule] -> Set.Set(Set.Set State) -> [Rule]
+getReducedRules currentRules reducedStates = nub $ map (\rule -> (getReducedRules' rule reducedStates)) currentRules
+
+getReducedRules' :: Rule -> Set.Set(Set.Set State) -> Rule
+getReducedRules' rule reducedStates = Rule{
+    currentState = getNewState (currentState rule) reducedStates,
+    inputSymbol = inputSymbol rule,
+    newState = getNewState (newState rule) reducedStates
+} where
+    getNewState currentState reducedStates = (Set.toList $ getFirstElement $ Set.filter (\state -> (Set.member currentState state)) reducedStates) !! 0
+    getFirstElement set = Set.elemAt 0 set
+
+getDifferenceInSets setX setY = Set.difference setX setY
+
+doesSetConatinsSomething :: Set.Set State -> Bool
+doesSetConatinsSomething setX = not $ null setX
+
+getRulesWithSymbol :: [Rule] -> Symbol -> [Rule]
+getRulesWithSymbol rules symbol = filter (\rule -> (inputSymbol rule == symbol)) rules
+
+getRulesWithNewStates :: [Rule] -> Set.Set State -> [Rule]
+getRulesWithNewStates rules states = filter (\rule -> (elem (newState rule) states)) rules
+
+getSetOfRulesLeadingToSetsInA :: [Rule] -> Set.Set State
+getSetOfRulesLeadingToSetsInA filteredRules = Set.fromList $ map (\rule -> (currentState rule)) filteredRules
     
 -- output automat to stdout
 printKA :: Automat -> IO()
@@ -195,7 +298,7 @@ main = do
     when (not $ isAutomatValid dka) $ error "This is not valid automat"
     
     if doReduce
-    then printKA $ addSinkToAutomat dka          -- output MKA
+    then printKA $ reduceAutomat $ addSinkToAutomat dka          -- output MKA
     else printKA dka     -- output analyzed DKA
     
     hClose input
