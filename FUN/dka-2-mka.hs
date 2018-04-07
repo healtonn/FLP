@@ -1,3 +1,5 @@
+-- dka-2-mka, xjochl00, Jakub Jochlík
+
 import System.Environment
 import System.IO
 import Data.List
@@ -282,7 +284,7 @@ getReducedRules' rule reducedStates = Rule{
     newState = getNewState (newState rule) reducedStates
 } where
     getNewState currentState reducedStates = (Set.toList $ getFirstElement $ Set.filter (\state -> (Set.member currentState state)) reducedStates) !! 0
-    getFirstElement set = Set.elemAt 0 set
+    getFirstElement set = Set.elemAt 0 $ set
 
 getDifferenceInSets setX setY = Set.difference setX setY
 

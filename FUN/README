@@ -1,0 +1,24 @@
+Jakub Jochlík, xjochl00 
+FLP, dka-2-mka
+
+Aplikace implementuje minimalizaci konečného automatu. K tomu jsou využity postupy popsané ve skriptech předmětu TIN, společně s Hopcroftovým algoritmem, jenž je popsaný na stránkách wikipedie.
+https://en.wikipedia.org/wiki/DFA_minimization
+
+Nejprve je přidán tzv. "SINK" stav, pokud je potřeba. Tento stav jsem ohodnotil hodnotou "0".
+
+Následuje odstranění nedostupných stavů a případné odstranění přechodových pravidel na nich založených.
+
+Nakonec je provedeno odstranění nerozlišitelných stavů. Výsledné hodnoty těchto stavů jsou určeny podle nejmenší hodnoty jenoho ze sloučených stavů.
+pokud tedy došlo ke sloučení stavů 2,5 a 6, výsledná hodnota tohoto stavu bude "2". Stejně tak jsou upraveny i přechodová pravidla automatu. Vzhledem k 
+diskuzi na foru aplikace neodstraňuje "SINK" stav po zkončení minimalizace.
+
+Aplikaci lze přeložit pomocí přiloženého Makefile, příkazem "make all".
+
+Program lze spustit následovně: 
+dka-2-mka [volby] [vstup]
+
+kde volby jsou přepínače "-i" a "-t"
+Přepínač "-i" pouze analyzuje načtený automat a vypíše jej na stdout.
+Přepínač "-t" provede minimalizaci a výsledný automat vypíše na stdout.
+
+Jako vstup může být použit například přiložený soubor test.in -> ./dka-2-mka -t test.in
