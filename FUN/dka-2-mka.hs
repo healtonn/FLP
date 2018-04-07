@@ -122,7 +122,7 @@ areStatesValid :: State -> Bool
 areStatesValid states = all isDigit states
 
 -- Return true if starting state is in set of states, false otherwise
--- note to myself: this is basicly "is state in states", so i can as well use it that way
+-- note to myself: this is basically "is state in states", so i can as well use it that way
 isStartingStateValid :: Automat -> State -> Bool
 isStartingStateValid automat state = elem state $ states automat
 
@@ -140,7 +140,7 @@ areRulesValid automat rule = (isStartingStateValid automat $ currentState rule) 
 isSymbolValid :: Symbol -> Automat -> Bool
 isSymbolValid symbol automat = elem symbol $ alphabet automat
 
--- Remove unreachable states imblemented by alg. 3.4 in TIN script
+-- Remove unreachable states implemented by alg. 3.4 in TIN script
 removeUnreachableStates :: Automat -> Automat
 removeUnreachableStates automat = automat {
     states = Set.fromList reachableStates,
