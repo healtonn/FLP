@@ -22,3 +22,5 @@ Přepínač "-i" pouze analyzuje načtený automat a vypíše jej na stdout.
 Přepínač "-t" provede minimalizaci a výsledný automat vypíše na stdout.
 
 Jako vstup může být použit například přiložený soubor test.in -> ./dka-2-mka -t test.in
+
+K programu je přiložen i soubor "makefile.bat", pro jednodušší překlad pro Windows
