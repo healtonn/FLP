@@ -19,7 +19,7 @@ data Rule = Rule {
     currentState :: State,
     inputSymbol :: Symbol,
     newState :: State
-} deriving (Eq)     -- to be able to use nub
+} deriving (Eq, Ord)     -- to be able to use nub
 
 -- representation of KA
 data Automat = Automat {
@@ -139,6 +139,33 @@ areRulesValid automat rule = (isStartingStateValid automat $ currentState rule) 
 -- return true if provided symbol is in alphabet, false otherwise
 isSymbolValid :: Symbol -> Automat -> Bool
 isSymbolValid symbol automat = elem symbol $ alphabet automat
+
+-- Remove unreachable states imblemented by alg. 3.4 in TIN script
+removeUnreachableStates :: Automat -> Automat
+removeUnreachableStates automat = automat {
+    states = Set.fromList reachableStates,
+    endStates = Set.fromList reachableEndStates,
+    rules = usefullRules
+}where
+    newStates = [startingState automat] -- Si = q0 
+    reachableStates = nub $ getReachableStates [] newStates automat
+    unreachableStates = Set.toList(states automat) \\ reachableStates
+    reachableEndStates = [x | x <- (Set.toList (endStates automat)), x `elem` reachableStates]
+    usefullRules = [x | x <- (rules automat), (currentState x) `elem` reachableStates]
+    
+getReachableStates :: [State] -> [State] -> Automat -> [State]
+getReachableStates previousStates newStates automat = if previousStates == newStates
+    then newStates
+    else getReachableStates newStates (nub $ newStates ++ (getReachableStatesFromNewStates newStates automat)) automat
+
+getReachableStatesFromNewStates :: [State] -> Automat -> [State]
+getReachableStatesFromNewStates newStates automat = nub $ concat $ map (\state -> getReachableStatesFromState state $ rules automat) newStates
+
+getReachableStatesFromState :: State -> [Rule] -> [State]
+getReachableStatesFromState startingState rules = nub $ concat $ map (\rule -> getNewState startingState rule) rules where
+    getNewState state rule = if ((currentState rule) == state)
+    then [(newState rule)]
+    else []
 
 -- according to TIN script, sink state has to  be added in order to create MKA. New sink state has number "0" if added
 addSinkToAutomat :: Automat -> Automat
@@ -286,19 +313,19 @@ printRule rule = currentState rule++ "," ++ inputSymbol rule ++ "," ++ newState 
 main :: IO() 
 main = do
     arguments <- getArgs
-    print arguments
+    --print arguments
     let doReduce = getArguments arguments     --select if i have to reduce the automat or just print it
     
     input <- getInput arguments         -- read from file or stdin?
     content <- hGetContents input       -- read
-    putStr content
+    --putStr content
     
     let dka = parseAutomat $ lines content
-    print (show dka)
+    --print (show dka)
     when (not $ isAutomatValid dka) $ error "This is not valid automat"
     
     if doReduce
-    then printKA $ reduceAutomat $ addSinkToAutomat dka          -- output MKA
+    then printKA $ reduceAutomat $ addSinkToAutomat $ removeUnreachableStates dka          -- output MKA
     else printKA dka     -- output analyzed DKA
     
     hClose input
