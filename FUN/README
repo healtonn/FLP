@@ -4,9 +4,9 @@ FLP, dka-2-mka
 Aplikace implementuje minimalizaci konečného automatu. K tomu jsou využity postupy popsané ve skriptech předmětu TIN, společně s Hopcroftovým algoritmem, jenž je popsaný na stránkách wikipedie.
 https://en.wikipedia.org/wiki/DFA_minimization
 
-Nejprve je přidán tzv. "SINK" stav, pokud je potřeba. Tento stav jsem ohodnotil hodnotou "0".
+V rámci dobrovolného bonusového rozšíření je implementováno odstranění nedostupných stavů a případné odstranění přechodových pravidel na nich založených.
 
-Následuje odstranění nedostupných stavů a případné odstranění přechodových pravidel na nich založených.
+Následně je přidán tzv. "SINK" stav, pokud je potřeba. Tento stav je ohodnocen hodnotou "0".
 
 Nakonec je provedeno odstranění nerozlišitelných stavů. Výsledné hodnoty těchto stavů jsou určeny podle nejmenší hodnoty jenoho ze sloučených stavů.
 pokud tedy došlo ke sloučení stavů 2,5 a 6, výsledná hodnota tohoto stavu bude "2". Stejně tak jsou upraveny i přechodová pravidla automatu. Vzhledem k 
